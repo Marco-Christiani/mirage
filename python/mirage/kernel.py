@@ -150,6 +150,7 @@ def get_cc_cmd(
         "-lcublas",
         "-Xcompiler=-fPIC",
         "--expt-relaxed-constexpr",
+        "-DMIRAGE_BACKEND_USE_CUDA",
         "-o",
         so_path,
     ]
