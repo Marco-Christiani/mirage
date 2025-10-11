@@ -44,13 +44,13 @@ extern "C" void execute_mugraph(std::vector<void const *> input_tensors,
 
 // A wrappr around `execute_mugraph` which uses C arrays instead of vectors
 // Entrypoint for Python
-void execute_mugraph_wrapper(void const *input_tensors[],
-                             size_t num_input_tensors,
-                             void *output_tensors[],
-                             size_t num_output_tensors,
-                             void *buf,
-                             cudaStream_t stream,
-                             void *profiler_buffer) {
+extern "C" void execute_mugraph_wrapper(void const *input_tensors[],
+                                        size_t num_input_tensors,
+                                        void *output_tensors[],
+                                        size_t num_output_tensors,
+                                        void *buf,
+                                        cudaStream_t stream,
+                                        void *profiler_buffer) {
   std::vector<void const *> input_tensors_vec(
       input_tensors, input_tensors + num_input_tensors);
   std::vector<void *> output_tensors_vec(output_tensors,
