@@ -168,11 +168,14 @@ void register_mugraph(
         &task_configs) {
   // push a begin-graph task and a event to launch dependent asks
   {
-    EventDesc e(EVENT_LAUNCH_DEPENDENT_TASKS, 1, 0, 0);
     FullTaskDesc t(TASK_BEGIN_TASK_GRAPH, 0 /*variant_id*/);
-    t.trigger_event = get_event_id(my_gpu_id, all_events.size(), false);
     all_tasks.push_back(t);
+    EventDesc e(EVENT_LAUNCH_DEPENDENT_TASKS, 1, 0, 0);
     all_events.push_back(e);
+    // Set BEGIN task's trigger_event to point to the LAUNCH_DEPENDENT_TASKS event
+    all_tasks.back().trigger_event = get_event_id(my_gpu_id, all_events.size() - 1, false);
+    // Add BEGIN task to first_tasks so it executes immediately
+    first_tasks.push_back(all_tasks.size() - 1);
   }
   std::vector<tb::TBInputOp *> pre_output_ops;
   kn::KNCustomizedOp const *pre_op = nullptr;
@@ -428,7 +431,7 @@ void register_mugraph(
             int offset = bid.x * bgraph.grid_dim.y * bgraph.grid_dim.z +
                          bid.y * bgraph.grid_dim.z + bid.z;
 
-            first_tasks.push_back(all_tasks.size());
+            // First operator tasks are now launched by event 1, not added to first_tasks
             all_tasks.push_back(tasks[offset]);
           }
         }

@@ -112,7 +112,8 @@ mpk.rmsnorm_backward_layer(
 )
 
 print("Compiling...")
-mpk.compile()
+mpk.compile(output_dir="./generated_code")
+print("Generated code saved to ./generated_code/")
 print("Executing...")
 mpk()
 torch.cuda.synchronize()

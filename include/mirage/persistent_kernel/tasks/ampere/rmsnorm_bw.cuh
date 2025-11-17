@@ -10,16 +10,12 @@ __device__ __forceinline__ void rms_norm_backward_impl(
     void *grad_input_ptr,
     void *grad_weight_ptr,
     float eps) {
-  
-  if (threadIdx.x == 0 && blockIdx.x == 0) {
-    printf("BACKWARD RMSNorm executing! BATCH=%d, HIDDEN=%d\n", BATCH_SIZE, HIDDEN_DIM);
-    printf("  input_ptr=%p, grad_output_ptr=%p, weight_ptr=%p\n", input_ptr, grad_output_ptr, weight_ptr);
-    printf("  grad_input_ptr=%p, grad_weight_ptr=%p\n", grad_input_ptr, grad_weight_ptr);
-    printf("BACKWARD RMSNorm executing! BATCH=%d, HIDDEN=%d\n", BATCH_SIZE, HIDDEN_DIM);
-    T *grad_input = static_cast<T *>(grad_input_ptr);
-    grad_input[0] = T(999.0f);  // Magic value
+
+  // DEBUG: Print when kernel is called
+  if (threadIdx.x == 0) {
+    printf("[RMSNorm BW KERNEL] EXECUTING! blockIdx=%d, input=%p, dout=%p, weight=%p, dinput=%p, dweight=%p\n",
+           blockIdx.x, input_ptr, grad_output_ptr, weight_ptr, grad_input_ptr, grad_weight_ptr);
   }
-  __syncthreads();
 
   static_assert(BATCH_SIZE == 1);
   extern __shared__ char smem[];

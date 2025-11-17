@@ -632,12 +632,18 @@ if __name__ == "__main__":
             )
 
         results = mpk.kn_graph.generate_task_graph(num_gpus=world_size, my_gpu_id=rank)
-        with open(f"task_graph_{rank}.json", "w") as f:
+        output_dir = os.path.abspath(args.output_dir)
+        fpath = os.path.join(output_dir, f"task_graph_{rank}.json")
+        print("Saving", fpath)
+        with open(fpath, "w") as f:
             f.write(results["json_file"])
-        with open(f"kernel_{rank}.cu", "w") as f:
+        fpath = os.path.join(output_dir, f"kernel_{rank}.cu")
+        print("Saving", fpath)
+        with open(fpath, "w") as f:
             f.write(results["cuda_code"])
 
-        mpk.compile(output_dir=args.output_dir)
+        print(f"Compiling with {output_dir=}")
+        mpk.compile(output_dir=output_dir)
 
     # g = torch.cuda.CUDAGraph()
     stream = torch.cuda.Stream()
