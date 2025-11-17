@@ -203,10 +203,16 @@ def get_compile_command(
             "-DMPK_ENABLE_TMA",
             "-DMIRAGE_GRACE_BLACKWELL",
         ]
+    elif target_cc == 86:
+        specific_cmd = [
+            "-arch=sm_86",
+            "-gencode=arch=compute_86,code=sm_86",
+        ]
     else:
         specific_cmd = [
             "-arch=native",
         ]
+
     
     if profiling:
         flags = flags + ["-DMPK_ENABLE_PROFILING"]
@@ -370,6 +376,57 @@ class PersistentKernel:
         tb_graph.new_input(output, (0, -1, -1), 1, True)
         self.kn_graph.customized([input, weight, output], tb_graph)
         self.kn_graph.register_task(tb_graph, "rmsnorm_hopper" if self.target_cc >= 90 else "rmsnorm")
+
+    def rmsnorm_backward_layer(
+        self,
+        input: DTensor,            # x - original input from forward [batch_size, hidden_dim]
+        grad_output: DTensor,      # dout - gradient from upstream [batch_size, hidden_dim]
+        weight: DTensor,           # normalization weight [hidden_dim]
+        grad_input: DTensor,       # dx - output gradient [batch_size, hidden_dim]
+        grad_weight: DTensor,      # dweight - output gradient [hidden_dim]
+        grid_dim: tuple,
+        block_dim: tuple,
+    ):
+        """RMSNorm backward pass layer."""
+        # Dimension checks
+        assert input.num_dims == 2, "input must be 2D"
+        assert grad_output.num_dims == 2, "grad_output must be 2D"
+        assert weight.num_dims == 1, "weight must be 1D"
+        assert grad_input.num_dims == 2, "grad_input must be 2D"
+        assert grad_weight.num_dims == 1, "grad_weight must be 1D"
+        
+        batch_size = input.dim(0)
+        hidden_dim = input.dim(1)
+        assert grad_output.dim(0) == batch_size
+        assert grad_output.dim(1) == hidden_dim
+        assert weight.dim(0) == hidden_dim
+        assert grad_input.dim(0) == batch_size
+        assert grad_input.dim(1) == hidden_dim
+        assert grad_weight.dim(0) == hidden_dim
+        
+        print("DEBUG: About to call register_task")
+        print(f"  batch_size={batch_size}, hidden_dim={hidden_dim}")
+
+        # Create thread block graph
+        tb_graph = TBGraph(CyTBGraph(grid_dim, block_dim, 1, 64))
+        
+        # Add inputs (x, dout, weight) - these are the 3 inputs
+        tb_graph.new_input(input, (0, -1, -1), 1, True)
+        tb_graph.new_input(grad_output, (0, -1, -1), 1, True)
+        tb_graph.new_input(weight, (-1, -1, -1), 0, True)
+        
+        # Add outputs (dx, dweight) - these are the 2 outputs
+        tb_graph.new_input(grad_input, (0, -1, -1), 1, True)
+        tb_graph.new_input(grad_weight, (-1, -1, -1), 0, True)
+        
+        # Register the customized operation
+        self.kn_graph.customized(
+            [input, grad_output, weight, grad_input, grad_weight], 
+            tb_graph
+        )
+        
+        # Register the task
+        self.kn_graph.register_task(tb_graph, "rmsnorm_backward")
 
     def rmsnorm_linear_layer(
         self,

@@ -507,6 +507,27 @@ void register_mugraph(
   all_events.push_back(
       EventDesc(EVENT_END_OF_TASK_GRAPH, pre_task_map.size(), 0, 0));
 
+  std::cout << "\n=== DEBUG: Before Prelaunching ===" << std::endl;
+  std::cout << "Total tasks: " << all_tasks.size() << std::endl;
+  std::cout << "Total events: " << all_events.size() << std::endl;
+
+  // Print all events
+  for (size_t e = 0; e < all_events.size(); e++) {
+    std::cout << "Event " << e << ": type=" << all_events[e].event_type
+              << " first_task=" << all_events[e].first_task_id
+              << " last_task=" << all_events[e].last_task_id
+              << " num_triggers=" << all_events[e].num_triggers << std::endl;
+  }
+
+  // Print task trigger/dependent events
+  for (size_t t = 0; t < all_tasks.size(); t++) {
+    size_t trigger_event_idx = all_tasks[t].trigger_event & 0xFFFFFFFF;
+    size_t dependent_event_idx = all_tasks[t].dependent_event & 0xFFFFFFFF;
+    std::cout << "Task " << t << ": type=" << all_tasks[t].task_type
+              << " trigger_event=" << trigger_event_idx
+              << " dependent_event=" << dependent_event_idx << std::endl;
+  }
+
   // Prelaunch all tasks at the begining of an iteration
   all_events[1].first_task_id = 2;
   all_events[1].last_task_id = all_tasks.size();
@@ -522,6 +543,93 @@ void register_mugraph(
       }
     }
   }
+
+  std::cout << "\n=== DEBUG: After Prelaunching ===" << std::endl;
+
+  // Print all events
+  for (size_t e = 0; e < all_events.size(); e++) {
+    std::cout << "Event " << e << ": type=" << all_events[e].event_type
+              << " first_task=" << all_events[e].first_task_id
+              << " last_task=" << all_events[e].last_task_id
+              << " num_triggers=" << all_events[e].num_triggers << std::endl;
+  }
+
+  // Print task trigger/dependent events  
+  for (size_t t = 0; t < all_tasks.size(); t++) {
+    size_t trigger_event_idx = all_tasks[t].trigger_event & 0xFFFFFFFF;
+    size_t dependent_event_idx = all_tasks[t].dependent_event & 0xFFFFFFFF;
+    std::cout << "Task " << t << ": type=" << all_tasks[t].task_type
+              << " trigger_event=" << trigger_event_idx
+              << " dependent_event=" << dependent_event_idx << std::endl;
+  }
+  std::cout << "===========================\n" << std::endl;
+
+  // // Update the trigger event for all tasks in pre_task_map  
+  // for (auto const &it : pre_task_map) {
+  //   all_tasks[it.second].trigger_event =
+  //       get_event_id(my_gpu_id, all_events.size(), false /*nvshmem_event*/);
+  // }
+  // all_events.push_back(
+  //     EventDesc(EVENT_END_OF_TASK_GRAPH, pre_task_map.size(), 0, 0));
+
+  // // Save original event ranges BEFORE modifying
+  // // Map from event index to its original task range
+  // std::map<size_t, std::pair<size_t, size_t>> original_event_ranges;
+  // for (size_t e = 1; e < all_events.size(); e++) {
+  //   if (all_events[e].event_type == EVENT_LAUNCH_TASKS ||
+  //       all_events[e].event_type == EVENT_LAUNCH_MASSIVE_TASKS) {
+  //     original_event_ranges[e] = std::make_pair(
+  //         all_events[e].first_task_id,
+  //         all_events[e].last_task_id);
+  //   }
+  // }
+
+  // // Prelaunch all tasks at the beginning of an iteration
+  // // Find the first LAUNCH_TASKS event
+  // size_t first_launch_event_idx = 1;
+  // for (size_t e = 1; e < all_events.size(); e++) {
+  //   if (all_events[e].event_type == EVENT_LAUNCH_TASKS ||
+  //       all_events[e].event_type == EVENT_LAUNCH_MASSIVE_TASKS) {
+  //     first_launch_event_idx = e;
+  //     break;
+  //   }
+  // }
+
+  // // CRITICAL FIX: Use dynamic first task ID instead of hardcoded 2
+  // // Task 0 is BEGIN_TASK_GRAPH, so first real task is at index 1
+  // size_t first_real_task_id = 1;
+
+  // // Expand the first launch event to prelaunch ALL tasks
+  // all_events[first_launch_event_idx].first_task_id = first_real_task_id;
+  // all_events[first_launch_event_idx].last_task_id = all_tasks.size();
+
+  // // Convert LAUNCH_TASKS events to EMPTY and set dependent_events
+  // // Start from first_launch_event_idx to process all events including the first one
+  // for (size_t e = first_launch_event_idx; e < all_events.size(); e++) {
+  //   if (all_events[e].event_type == EVENT_LAUNCH_TASKS ||
+  //       all_events[e].event_type == EVENT_LAUNCH_MASSIVE_TASKS) {
+      
+  //     all_events[e].event_type = EVENT_EMPTY;
+      
+  //     // Use the ORIGINAL task range
+  //     if (original_event_ranges.find(e) != original_event_ranges.end()) {
+  //       auto range = original_event_ranges[e];
+  //       size_t orig_first = range.first;
+  //       size_t orig_last = range.second;
+        
+  //       // Set dependent_event for tasks that were originally in this event
+  //       // Skip the first event's original tasks - they can start immediately
+  //       if (e != first_launch_event_idx) {
+  //         for (size_t t = orig_first; t < orig_last; t++) {
+  //           all_tasks[t].dependent_event =
+  //               get_event_id(my_gpu_id, e, false /*nvshmem_event*/);
+  //         }
+  //       }
+  //     }
+  //   }
+  // }
+
+
 }
 
 bool sanity_check(mirage::kernel::Graph const &graph,
@@ -1312,6 +1420,7 @@ TaskGraphResult print_task_graph(
   std::map<TaskType, std::string> task_type_to_name;
   task_type_to_name[TASK_EMBEDDING] = "TASK_EMBEDDING";
   task_type_to_name[TASK_RMS_NORM] = "TASK_RMS_NORM";
+  task_type_to_name[TASK_RMS_NORM_BACKWARD] = "TASK_RMS_NORM_BACKWARD";
   task_type_to_name[TASK_RMS_NORM_LINEAR] = "TASK_RMS_NORM_LINEAR";
   task_type_to_name[TASK_ATTENTION_1] = "TASK_ATTENTION_1";
   task_type_to_name[TASK_SILU_MUL] = "TASK_SILU_MUL";

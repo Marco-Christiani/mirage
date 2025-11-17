@@ -9,6 +9,7 @@
 #include "multitoken_paged_attention.cuh"
 #include "reduction.cuh"
 #include "rmsnorm.cuh"
+#include "rmsnorm_bw.cuh"
 #include "rotary_embedding.cuh"
 #include "silu_mul.cuh"
 

@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
 message(STATUS "CMake Version: ${CMAKE_VERSION}")
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if (EXISTS ${CMAKE_CURRENT_BINARY_DIR}/config.cmake)
   include (${CMAKE_CURRENT_BINARY_DIR}/config.cmake)
@@ -38,7 +39,7 @@ if (${USE_CUDA} STREQUAL "OFF")
   )
 
   list(REMOVE_ITEM MIRAGE_SRCS ${MIRAGE_EXCLUDE_SRCS})
-  
+
   message(STATUS "MIRAGE_SRCS: ${MIRAGE_SRCS}")
 endif()
 
@@ -206,7 +207,7 @@ install(TARGETS mirage_runtime
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include
     DESTINATION .)
 
-install(FILES ${ABSTRACT_SUBEXPR_LIBRARIES} 
+install(FILES ${ABSTRACT_SUBEXPR_LIBRARIES}
     DESTINATION lib)
 
 if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
@@ -401,26 +402,26 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   set(CPP_EXAMPLES_DIR cpp_examples)
   set(CPP_EXAMPLES_BIN generate_kernel)
   file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}.cc)
-  
+
   add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
   set_target_properties(${CPP_EXAMPLES_BIN}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CPP_EXAMPLES_DIR})
   target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
-  
+
   # Create output directory for generated kernels
   set(GENERATED_KERNELS_DIR ${CMAKE_BINARY_DIR}/generated_kernels)
   file(MAKE_DIRECTORY ${GENERATED_KERNELS_DIR})
-  
+
   # Define kernel parameters (M, N, K)
   set(KERNEL_M 16)
   set(KERNEL_N 64)
   set(KERNEL_K 128)
   set(KERNEL_NAME "matmul_${KERNEL_M}x${KERNEL_N}x${KERNEL_K}")
-  
+
   # Target for kernel gen
   add_custom_command(
     OUTPUT ${GENERATED_KERNELS_DIR}/${KERNEL_NAME}.cu
-    COMMAND ${CMAKE_BINARY_DIR}/${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN} 
+    COMMAND ${CMAKE_BINARY_DIR}/${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}
             ${KERNEL_M} ${KERNEL_N} ${KERNEL_K}
             ${GENERATED_KERNELS_DIR}/${KERNEL_NAME}.cu
     DEPENDS ${CPP_EXAMPLES_BIN}
@@ -463,16 +464,16 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
     COMMENT "Compiling CUDA kernel ${KERNEL_NAME}.so"
     VERBATIM
   )
- 
+
   # Custom target to build everything
   add_custom_target(generate_and_compile_kernel ALL
     DEPENDS ${GENERATED_KERNELS_DIR}/${KERNEL_NAME}.so
   )
- 
+
   # put it somewhere
   install(FILES ${GENERATED_KERNELS_DIR}/${KERNEL_NAME}.so
           DESTINATION lib/mirage/kernels)
-  
+
   # log
   add_custom_command(TARGET generate_and_compile_kernel POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E echo "Generated kernel: ${GENERATED_KERNELS_DIR}/${KERNEL_NAME}.so"

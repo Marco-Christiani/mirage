@@ -32,6 +32,11 @@ public:
                               std::vector<int> const &params);
   int register_rmsnorm_task(threadblock::Graph const &bgraph,
                             std::vector<int> const &params);
+
+  int register_rmsnorm_backward_task(
+      threadblock::Graph const &bgraph,
+      std::vector<int> const &params);
+
   int register_rmsnorm_linear_task(threadblock::Graph const &bgraph,
                                    std::vector<int> const &params);
   int register_attention_task(threadblock::Graph const &bgraph,

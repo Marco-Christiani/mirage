@@ -123,6 +123,76 @@ int TaskRegister::register_rmsnorm_task(threadblock::Graph const &bgraph,
   return register_task_variant(TASK_RMS_NORM, code.to_string());
 }
 
+int TaskRegister::register_rmsnorm_backward_task(
+    threadblock::Graph const &bgraph,
+    std::vector<int> const &params) {
+  assert(params.size() == 0);
+
+  using namespace mirage;
+
+  std::vector<tb::TBInputOp *> input_ops;
+  std::vector<tb::TBInputOp *> output_ops;
+
+  // x, dout, weight  ->  dx, dweight
+  int const num_inputs  = 3;
+  int const num_outputs = 2;
+
+  assert(bgraph.operators.size() == static_cast<size_t>(num_inputs + num_outputs));
+
+  for (auto const &op : bgraph.operators) {
+    assert(op->op_type == type::TB_INPUT_OP);
+    if (input_ops.size() < static_cast<size_t>(num_inputs)) {
+      input_ops.push_back(static_cast<tb::TBInputOp *>(op));
+    } else {
+      output_ops.push_back(static_cast<tb::TBInputOp *>(op));
+    }
+  }
+
+  // Shape checks: assume x and dout are [B, H], outputs match them.
+  auto const &x_tensor    = input_ops[0]->dtensor;
+  auto const &dout_tensor = input_ops[1]->dtensor;
+  auto const &w_tensor    = input_ops[2]->dtensor;
+
+  assert(x_tensor.num_dims == 2);
+  assert(dout_tensor.num_dims == 2);
+  assert(x_tensor.dim[0] == dout_tensor.dim[0]); // batch
+  assert(x_tensor.dim[1] == dout_tensor.dim[1]); // hidden
+
+  int const batch_size  = x_tensor.dim[0];
+  int const hidden_dim  = x_tensor.dim[1];
+
+  // weight is [H]
+  assert(w_tensor.num_dims == 1 || (w_tensor.num_dims == 2 && w_tensor.dim[0] == 1));
+  assert(w_tensor.dim[w_tensor.num_dims - 1] == hidden_dim);
+
+  // Outputs: dx [B, H], dweight [H]
+  auto const &dx_tensor      = output_ops[0]->dtensor;
+  auto const &dweight_tensor = output_ops[1]->dtensor;
+
+  assert(dx_tensor.num_dims == 2);
+  assert(dx_tensor.dim[0] == batch_size);
+  assert(dx_tensor.dim[1] == hidden_dim);
+
+  assert(dweight_tensor.dim[dweight_tensor.num_dims - 1] == hidden_dim);
+
+  mirage::transpiler::CodeKeeper code;
+  code.inc_indent();
+
+  code.e(
+      "kernel::rms_norm_backward_impl<bfloat16, $, $>(", 
+      batch_size,
+      hidden_dim);
+  code.e("    task_desc->input_ptrs[0],  // x");
+  code.e("    task_desc->input_ptrs[1],  // dout");
+  code.e("    task_desc->input_ptrs[2],  // weight");
+  code.e("    task_desc->output_ptrs[0], // dx");
+  code.e("    task_desc->output_ptrs[1], // dweight");
+  code.e("    1e-6f);");
+
+  return register_task_variant(TASK_RMS_NORM_BACKWARD, code.to_string());
+}
+
+
 int TaskRegister::register_rmsnorm_linear_task(threadblock::Graph const &bgraph,
                                                std::vector<int> const &params) {
   assert(params.size() == 0);

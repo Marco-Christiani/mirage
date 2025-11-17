@@ -6,3 +6,18 @@ requires = [
     "z3-solver",
     "graphviz"
 ]
+
+[dependency-groups]
+dev = [
+    "accelerate==1.8.0",
+    "cmake>=3.24",
+    "cython>=0.28",
+    "graphviz>=0.21",
+    "numpy>=2.3.4",
+    "protobuf==3.20.0",
+    "tg4perfetto==0.0.4",
+    "torch>=2.4",
+    "tqdm>=4.67.1",
+    "transformers==4.53.0",
+    "z3-solver==4.15",
+]

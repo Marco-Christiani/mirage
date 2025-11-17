@@ -21,6 +21,9 @@ __device__ __forceinline__ void rms_norm_impl(void const *input_ptr,
                                               void const *weight_ptr,
                                               void *output_ptr,
                                               float eps) {
+  if (threadIdx.x == 0 && blockIdx.x == 0) {
+    printf("FORWARD RMSNorm executing! BATCH=%d, HIDDEN=%d\n", BATCH_SIZE, HIDDEN_DIM);
+  }
   static_assert(BATCH_SIZE == 1);
   extern __shared__ char smem[];
   static_assert(HIDDEN_DIM % NUM_THREADS == 0);
