@@ -428,6 +428,62 @@ class PersistentKernel:
         # Register the task
         self.kn_graph.register_task(tb_graph, "rmsnorm_backward")
 
+    def linear_backward_layer(
+        self,
+        input: DTensor,            # x - original input from forward [batch_size, in_features]
+        weight: DTensor,           # W - weight matrix [out_features, in_features]
+        grad_output: DTensor,      # dL/dy - gradient from upstream [batch_size, out_features]
+        grad_input: DTensor,       # dL/dx - output gradient [batch_size, in_features]
+        grad_weight: DTensor,      # dL/dW - output gradient [out_features, in_features]
+        grid_dim: tuple,
+        block_dim: tuple,
+    ):
+        """Linear backward pass layer.
+
+        Computes:
+            grad_input = grad_output @ weight      (batch_size x in_features)
+            grad_weight = grad_output.T @ input    (out_features x in_features)
+        """
+        # Dimension checks
+        assert input.num_dims == 2, "input must be 2D"
+        assert weight.num_dims == 2, "weight must be 2D"
+        assert grad_output.num_dims == 2, "grad_output must be 2D"
+        assert grad_input.num_dims == 2, "grad_input must be 2D"
+        assert grad_weight.num_dims == 2, "grad_weight must be 2D"
+
+        batch_size = input.dim(0)
+        in_features = input.dim(1)
+        out_features = weight.dim(0)
+
+        assert weight.dim(1) == in_features
+        assert grad_output.dim(0) == batch_size
+        assert grad_output.dim(1) == out_features
+        assert grad_input.dim(0) == batch_size
+        assert grad_input.dim(1) == in_features
+        assert grad_weight.dim(0) == out_features
+        assert grad_weight.dim(1) == in_features
+
+        # Create thread block graph
+        tb_graph = TBGraph(CyTBGraph(grid_dim, block_dim, 1, 64))
+
+        # Add inputs (x, weight, dout) - 3 inputs
+        tb_graph.new_input(input, (0, -1, -1), 1, True)
+        tb_graph.new_input(weight, (-1, -1, -1), 0, True)
+        tb_graph.new_input(grad_output, (0, -1, -1), 1, True)
+
+        # Add outputs (dx, dweight) - 2 outputs
+        tb_graph.new_input(grad_input, (0, -1, -1), 1, True)
+        tb_graph.new_input(grad_weight, (-1, -1, -1), 0, True)
+
+        # Register the customized operation
+        self.kn_graph.customized(
+            [input, weight, grad_output, grad_input, grad_weight],
+            tb_graph
+        )
+
+        # Register the task
+        self.kn_graph.register_task(tb_graph, "linear_backward")
+
     def rmsnorm_linear_layer(
         self,
         input: DTensor,

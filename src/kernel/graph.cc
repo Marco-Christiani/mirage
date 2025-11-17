@@ -517,6 +517,9 @@ void Graph::register_task(char const *task_type, std::vector<int> params) {
   else if (name == "rmsnorm_backward") {
     int variant_id = task_register->register_rmsnorm_backward_task(customized->bgraph, params);
     task_config[op] = std::make_tuple(3, 2, TASK_RMS_NORM_BACKWARD, variant_id);
+  } else if (name == "linear_backward") {
+    int variant_id = task_register->register_linear_backward_task(customized->bgraph, params);
+    task_config[op] = std::make_tuple(3, 2, TASK_LINEAR_BACKWARD, variant_id);
   }
   // Hopper tasks
   else if (name == "linear_hopper") {
