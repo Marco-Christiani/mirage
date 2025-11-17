@@ -142,13 +142,26 @@ __global__ void prepare_kernel(RuntimeConfig config,
        i += blockDim.x * gridDim.x) {
     config.all_event_counters[i] = 0;
   }
-  // Send event to scheduler[0]
+  // Initialize first_tasks in worker queue 0 to start execution
   if (blockIdx.x == 0 && threadIdx.x == 0) {
     assert(config.all_events[end_of_task_graph_event_pos].event_type ==
            EVENT_END_OF_TASK_GRAPH);
-    config.sched_queue_next_free_event_id[0] = 1;
-    config.sched_queues[0][0] = end_of_task_graph_event_pos;
-    config.sched_queue_last_ready_event_id[0] = 1;
+
+    // Start iteration 1 by directly enqueuing the graph's first tasks.
+    // The original MPK runtime bootstraps iteration 1 by injecting an
+    // END_OF_TASK_GRAPH event into scheduler[0], causing the scheduler to
+    // enqueue these tasks. For our use case, we bypass that bootstrap and
+    // place the first tasks directly into worker queue 0.
+    //
+    // Importanly iteration must start at 1 (not 0) bc the event
+    // dependency logic computes needed_counts = num_triggers * iteration.
+    // Using iteration=0 would cause every dependency to appear satisfied
+    // and would prevent the scheduler from advancing.
+    for (int i = 0; i < config.num_first_tasks; i++) {
+      TaskId task_id = config.first_tasks[i];
+      config.worker_queues[0][i] = compute_task_id(1 /*iteration*/, task_id);
+    }
+    config.worker_queue_last_ready_task_id[0] = config.num_first_tasks;
   }
 }
 
@@ -786,9 +799,10 @@ __device__ __forceinline__ void execute_scheduler(RuntimeConfig config,
       worker_queue_next_free_task_pos[i] = 0;
     }
 
-    // if (sched_id == 0) {
-    //   worker_queue_next_free_task_pos[0] = 1;
-    // }
+    // Scheduler 0 must start at position 1 to avoid overwriting first_tasks in worker queue 0
+    if (sched_id == 0) {
+      worker_queue_next_free_task_pos[0] = 1;
+    }
     int next_worker = my_first_worker;
     int queue_idx = 0;
     while (true) {
@@ -1219,6 +1233,7 @@ extern "C" void init_persistent_kernel(std::vector<void *> meta_tensors,
                first_tasks.data(),
                first_tasks.size() * sizeof(TaskId),
                cudaMemcpyHostToDevice);
+    global_runtime_config.num_first_tasks = first_tasks.size();
   }
 
   // Set configuration for kernels
