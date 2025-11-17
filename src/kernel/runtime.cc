@@ -646,19 +646,48 @@ bool sanity_check(mirage::kernel::Graph const &graph,
     event_counts[i] = all_events[i].num_triggers;
   }
   std::queue<TaskId> task_queue;
+  std::queue<TaskId> waiting_tasks;  // Tasks waiting for dependent_event
+  std::unordered_set<TaskId> enqueued_tasks;  // Track tasks currently in task_queue
   std::queue<EventId> event_queue;
   printf("First tasks: %d\n", (int)first_tasks.size());
   for (size_t i = 0; i < first_tasks.size(); i++) {
+    printf("[SANITY] enqueue task %d type=%d reason=first_task from_event=INIT dep_event=%zu\n",
+           (int)first_tasks[i], all_tasks[first_tasks[i]].task_type,
+           all_tasks[first_tasks[i]].dependent_event);
+    fflush(stdout);
     task_queue.push(first_tasks[i]);
+    enqueued_tasks.insert(first_tasks[i]);
   }
-  while (!(task_queue.empty() && event_queue.empty())) {
+  while (!(task_queue.empty() && event_queue.empty() && waiting_tasks.empty())) {
     // Execute tasks
     while (!task_queue.empty()) {
       TaskId task = task_queue.front();
       task_queue.pop();
+      enqueued_tasks.erase(task);  // Remove from enqueued set
+      FullTaskDesc desc = all_tasks[task];
+
+      // Check if task's dependent_event has been satisfied
+      if (desc.dependent_event != EVENT_INVALID_ID) {
+        EventId dep_event_id = desc.dependent_event;
+        size_t dep_event_pos = dep_event_id & 0xffffffff;
+        if (triggered_events.count(dep_event_id) == 0) {
+          // Dependent event not triggered yet - task must wait
+          printf("[SANITY] task %d waiting for dependent_event=%zu (not triggered yet)\n",
+                 (int)task, dep_event_pos);
+          fflush(stdout);
+          waiting_tasks.push(task);
+          continue;
+        }
+      }
+
+      if (executed_tasks.count(task) != 0) {
+        printf("ERROR: Task %d already executed!\n", (int)task);
+        printf("  Task type: %d\n", all_tasks[task].task_type);
+        printf("  Trigger event: %zu\n", all_tasks[task].trigger_event);
+        fflush(stdout);
+      }
       assert(executed_tasks.count(task) == 0);
       executed_tasks.insert(task);
-      FullTaskDesc desc = all_tasks[task];
       if (desc.trigger_event != EVENT_INVALID_ID) {
         EventId event_id = desc.trigger_event;
         size_t event_pos = event_id & 0xffffffff;
@@ -680,8 +709,50 @@ bool sanity_check(mirage::kernel::Graph const &graph,
       triggered_events.insert(event_id);
       size_t event_pos = event_id & 0xffffffff;
       EventDesc desc = all_events[event_pos];
+      printf("[SANITY] event %zu triggered (type=%d) launching tasks [%d,%d)\n",
+             event_pos, desc.event_type, (int)desc.first_task_id, (int)desc.last_task_id);
+      fflush(stdout);
       for (TaskId tid = desc.first_task_id; tid < desc.last_task_id; tid++) {
+        // Skip if already executed or already enqueued
+        if (executed_tasks.count(tid) > 0) {
+          printf("[SANITY] skip task %d (already executed)\n", (int)tid);
+          fflush(stdout);
+          continue;
+        }
+        if (enqueued_tasks.count(tid) > 0) {
+          printf("[SANITY] skip task %d (already in queue)\n", (int)tid);
+          fflush(stdout);
+          continue;
+        }
+        printf("[SANITY] enqueue task %d type=%d reason=event_trigger from_event=%zu dep_event=%zu\n",
+               (int)tid, all_tasks[tid].task_type, event_pos, all_tasks[tid].dependent_event);
+        fflush(stdout);
         task_queue.push(tid);
+        enqueued_tasks.insert(tid);
+      }
+
+      // Check if any waiting tasks can now proceed
+      size_t waiting_count = waiting_tasks.size();
+      for (size_t i = 0; i < waiting_count; i++) {
+        TaskId waiting_task = waiting_tasks.front();
+        waiting_tasks.pop();
+        FullTaskDesc waiting_desc = all_tasks[waiting_task];
+        if (waiting_desc.dependent_event != EVENT_INVALID_ID &&
+            triggered_events.count(waiting_desc.dependent_event) > 0) {
+          // Dependency satisfied, move to ready queue (if not already enqueued)
+          if (enqueued_tasks.count(waiting_task) == 0) {
+            printf("[SANITY] task %d dependency satisfied, moving to ready queue\n", (int)waiting_task);
+            fflush(stdout);
+            task_queue.push(waiting_task);
+            enqueued_tasks.insert(waiting_task);
+          } else {
+            printf("[SANITY] task %d dependency satisfied but already enqueued, skipping\n", (int)waiting_task);
+            fflush(stdout);
+          }
+        } else {
+          // Still waiting
+          waiting_tasks.push(waiting_task);
+        }
       }
     }
   }
