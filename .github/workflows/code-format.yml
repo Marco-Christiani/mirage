@@ -20,4 +20,5 @@ jobs:
         with:
           clang-format-version: "15"
           check-path: ${{ matrix.path['check'] }}
-          exclude-regex: ${{ matrix.path['exclude'] }} 
+          exclude-regex: ${{ matrix.path['exclude'] }}
+
