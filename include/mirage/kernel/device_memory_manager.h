@@ -45,6 +45,7 @@ public:
 
 public:
   static DeviceMemoryManager *get_instance();
+  static void release_instance();
 
 public:
   // fingerprint related fields

@@ -168,6 +168,13 @@ DeviceMemoryManager *DeviceMemoryManager::get_instance() {
   return singleton;
 }
 
+void DeviceMemoryManager::release_instance() {
+  if (singleton != nullptr) {
+    delete singleton;
+    singleton = nullptr;
+  }
+}
+
 /*static*/
 void DeviceMemoryManager::set_gpu_device_id(int gpu_id) {
   // set_gpu_device_id must be called before creating DeviceMemoryManager

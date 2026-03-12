@@ -73,6 +73,13 @@ DeviceMemoryManager *DeviceMemoryManager::get_instance() {
   }
   return singleton;
 }
+
+void DeviceMemoryManager::release_instance() {
+  if (singleton != nullptr) {
+    delete singleton;
+    singleton = nullptr;
+  }
+}
 #endif
 
 } // namespace kernel
