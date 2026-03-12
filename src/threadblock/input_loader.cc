@@ -57,7 +57,7 @@ TBOperator *Graph::create_input_op(mirage::kernel::DTensor const &dtensor,
 
   // Check shmem usage
   size_t smem_usage = calculate_shared_memory_usage(op);
-  if (smem_usage > mirage::config::MAX_SMEM_SIZE) {
+  if (smem_usage > this->max_smem_size) {
     delete op;
     return nullptr;
   } else {

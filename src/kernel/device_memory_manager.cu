@@ -184,6 +184,101 @@ void DeviceMemoryManager::set_gpu_device_id(int gpu_id) {
   singleton = new DeviceMemoryManager(1 /*num_devices*/, gpu_id /*gpu_id*/);
 }
 
+/*static*/
+void DeviceMemoryManager::configure(int gpu_id,
+                                    mirage::config::MemoryLimits const &limits) {
+  assert(singleton == nullptr);
+  singleton = new DeviceMemoryManager(1 /*num_devices*/, gpu_id, limits);
+}
+
+DeviceMemoryManager::DeviceMemoryManager(int _num_gpus,
+                                         int _gpu_id,
+                                         mirage::config::MemoryLimits const &limits)
+    : num_devices(_num_gpus), gpu_id(_gpu_id) {
+  checkCUDA(cudaSetDevice(gpu_id));
+  printf("Mirage::DeviceMemoryManager: gpu_id(%d) num_gpus(%d)"
+         " dmem_fp(%zu) smem_fp(%zu) max_tbs(%zu)\n",
+         gpu_id, num_devices,
+         limits.max_dmem_fp_size,
+         limits.max_smem_fp_size,
+         limits.max_num_threadblocks);
+  // Part 1: exponential lookup table
+  checkCUDA(
+      cudaMalloc(&exp_lookup_table, (sizeof(FPType) * FP_Q + 15) / 16 * 16));
+  assert(FP_Q < FP_P);
+  assert((FP_P - 1) % FP_Q == 0);
+  FPType exp_table[FP_Q];
+  exp_table[0] = 1;
+  for (int i = 1; i < FP_Q; i++) {
+    exp_table[i] = (exp_table[i - 1] * FP_EXP_BASE) % FP_P;
+  }
+  assert((exp_table[FP_Q - 1] * FP_EXP_BASE) % FP_P == 1);
+  checkCUDA(cudaMemcpy(exp_lookup_table, exp_table,
+                       sizeof(FPType) * FP_Q, cudaMemcpyHostToDevice));
+  // Part 2: division p lookup table
+  checkCUDA(
+      cudaMalloc(&div_p_lookup_table, (sizeof(FPType) * FP_P + 15) / 16 * 16));
+  FPType div_p_table[FP_P];
+  for (uint32_t i = 0; i < FP_P; i++) {
+    div_p_table[i] = 1;
+    for (uint32_t j = 1; j < FP_P; j++) {
+      if ((i * j) % FP_P == 1) div_p_table[i] = j;
+    }
+    if (i > 1) assert(div_p_table[i] != 1);
+  }
+  checkCUDA(cudaMemcpy(div_p_lookup_table, div_p_table,
+                       sizeof(FPType) * FP_P, cudaMemcpyHostToDevice));
+  // Part 3: division q lookup table
+  checkCUDA(
+      cudaMalloc(&div_q_lookup_table, (sizeof(FPType) * FP_Q + 15) / 16 * 16));
+  FPType div_q_table[FP_Q];
+  for (uint32_t i = 0; i < FP_Q; i++) {
+    div_q_table[i] = 1;
+    for (uint32_t j = 1; j < FP_Q; j++) {
+      if ((i * j) % FP_Q == 1) div_q_table[i] = j;
+    }
+    if (i > 1) assert(div_q_table[i] != 1);
+  }
+  checkCUDA(cudaMemcpy(div_q_lookup_table, div_q_table,
+                       sizeof(FPType) * FP_Q, cudaMemcpyHostToDevice));
+  // Part 4: sqrt p lookup table
+  checkCUDA(
+      cudaMalloc(&sqrt_p_lookup_table, (sizeof(FPType) * FP_P + 15) / 16 * 16));
+  assert(FP_P % 4 == 3);
+  FPType sqrt_p_table[FP_P];
+  for (uint32_t i = 0; i < FP_P; i++) {
+    sqrt_p_table[i] = 1;
+    for (uint32_t j = 0; j < (FP_P + 1) / 4; j++) {
+      sqrt_p_table[i] = (sqrt_p_table[i] * i) % FP_P;
+    }
+  }
+  checkCUDA(cudaMemcpy(sqrt_p_lookup_table, sqrt_p_table,
+                       sizeof(FPType) * FP_P, cudaMemcpyHostToDevice));
+  // Part 5: sqrt q lookup table
+  checkCUDA(
+      cudaMalloc(&sqrt_q_lookup_table, (sizeof(FPType) * FP_Q + 15) / 16 * 16));
+  assert(FP_Q % 4 == 3);
+  FPType sqrt_q_table[FP_Q];
+  for (uint32_t i = 0; i < FP_Q; i++) {
+    sqrt_q_table[i] = 1;
+    for (uint32_t j = 0; j < (FP_Q + 1) / 4; j++) {
+      sqrt_q_table[i] = (sqrt_q_table[i] * i) % FP_Q;
+    }
+  }
+  checkCUDA(cudaMemcpy(sqrt_q_lookup_table, sqrt_q_table,
+                       sizeof(FPType) * FP_Q, cudaMemcpyHostToDevice));
+  // data and fingerprints — use configured sizes
+  for (int i = 0; i < num_devices; i++) {
+    if (i == 0) {
+      for (int k = 0; k < num_devices; k++) {
+        checkCUDA(cudaMalloc(&fp_base_ptr[k], limits.max_dmem_fp_size));
+      }
+      checkCUDA(cudaMalloc(&stensor_fp_base_ptr,
+                           limits.max_smem_fp_size * limits.max_num_threadblocks));
+    }
+  }
+}
+
 void cython_set_gpu_device_id(int gpu_id) {
   DeviceMemoryManager::set_gpu_device_id(gpu_id);
 }

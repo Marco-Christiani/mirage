@@ -3,6 +3,7 @@
 #include "mirage/c/graph.h"
 #include "mirage/c/types.h"
 
+#include "mirage/config.h"
 #include "mirage/kernel/device_memory_manager.h"
 #include "mirage/kernel/graph.h"
 #include "mirage/layout.h"
@@ -77,6 +78,25 @@ bool to_binary_operator_type(mirage_binary_op_t op,
 
 constexpr uint32_t k_default_search_capacity = 1024;
 constexpr uint32_t k_max_search_capacity = 4096;
+
+mirage::config::MemoryLimits
+make_memory_limits(mirage_search_options_t const *options) {
+  mirage::config::MemoryLimits limits;
+  if (options == nullptr) {
+    return limits;
+  }
+  if (options->max_dmem_size != 0)
+    limits.max_dmem_size = options->max_dmem_size;
+  if (options->max_smem_size != 0)
+    limits.max_smem_size = options->max_smem_size;
+  if (options->max_dmem_fp_size != 0)
+    limits.max_dmem_fp_size = options->max_dmem_fp_size;
+  if (options->max_smem_fp_size != 0)
+    limits.max_smem_fp_size = options->max_smem_fp_size;
+  if (options->max_num_threadblocks != 0)
+    limits.max_num_threadblocks = options->max_num_threadblocks;
+  return limits;
+}
 
 } // namespace
 
@@ -436,13 +456,24 @@ mirage_status_t mirage_search(mirage_device_t *device,
     }
   }
 
+  auto limits = make_memory_limits(options);
+
+  // Configure device memory manager with limits before search starts.
+  // This ensures fingerprint buffers are sized appropriately.
+  // Only configure if not already initialized (e.g. from a prior search).
+  if (device != nullptr &&
+      mirage::kernel::DeviceMemoryManager::singleton == nullptr) {
+    mirage::kernel::DeviceMemoryManager::configure(device->ordinal, limits);
+  }
+
   std::vector<mirage::kernel::Graph *> raw_candidates(max_candidates, nullptr);
 
   int num = mirage::search_c::cython_search(
       graph->graph, "cuda", static_cast<int>(max_candidates),
       raw_candidates.data(), cimaps, comaps, cgriddims, cblockdims, cfmaps,
       cfranges,
-      /*filename=*/nullptr, verbose, /*default_config=*/nullptr, formal_verify);
+      /*filename=*/nullptr, verbose, /*default_config=*/nullptr, formal_verify,
+      limits);
 
   auto *result = new (std::nothrow) mirage_search_result_t{};
   if (result == nullptr) {

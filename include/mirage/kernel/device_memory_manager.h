@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include "mirage/config.h"
 #include "mirage/kernel/customized.h"
 #include "mirage/kernel/matmul.h"
 #include "mirage/kernel/operator.h"
@@ -32,6 +33,8 @@ public:
   int num_devices;
 #ifdef MIRAGE_FINGERPRINT_USE_CUDA
   DeviceMemoryManager(int device_id, int num_gpus);
+  DeviceMemoryManager(int num_gpus, int gpu_id,
+                      mirage::config::MemoryLimits const &limits);
   static void set_gpu_device_id(int gpu_id);
   int gpu_id;
   cudaStream_t stream[mirage::config::MAX_NUM_DEVICES];
@@ -46,6 +49,8 @@ public:
 public:
   static DeviceMemoryManager *get_instance();
   static void release_instance();
+  static void configure(int gpu_id,
+                        mirage::config::MemoryLimits const &limits);
 
 public:
   // fingerprint related fields

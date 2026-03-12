@@ -30,14 +30,17 @@ namespace threadblock {
 
 Graph::Graph()
     : grid_dim(1, 1, 1), block_dim(1, 1, 1), forloop_range(1),
-      reduction_dimx(1), smem_offset(0) {}
+      reduction_dimx(1), smem_offset(0),
+      max_smem_size(mirage::config::MAX_SMEM_SIZE) {}
 
 Graph::Graph(dim3 _grid_dim,
              dim3 _block_dim,
              int _forloop_range,
-             int _reduction_dimx)
+             int _reduction_dimx,
+             size_t _max_smem_size)
     : grid_dim(_grid_dim), block_dim(_block_dim), forloop_range(_forloop_range),
-      reduction_dimx(_reduction_dimx), smem_offset(0) {
+      reduction_dimx(_reduction_dimx), smem_offset(0),
+      max_smem_size(_max_smem_size) {
   // A bgraph cannot have more than MAX_NUM_THREADBLOCKS_PER_KERNEL threadblocks
   // otherwise we don't have enough buffers in device memory for saving
   // fingerprints

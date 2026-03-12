@@ -38,7 +38,7 @@ TBOperator *Graph::create_rms_norm_op(STensor const &input) {
   TBOperator *op = new TBRmsNormOp(this, input);
   // check shmem usage
   size_t smem_usage = calculate_shared_memory_usage(op);
-  if (smem_usage > mirage::config::MAX_SMEM_SIZE) {
+  if (smem_usage > this->max_smem_size) {
     delete op;
     return nullptr;
   } else {

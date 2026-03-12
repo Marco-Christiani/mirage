@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "mirage/config.h"
 #include "mirage/kernel/graph.h"
 #include "mirage/threadblock/graph.h"
 #include "mirage/type.h"
@@ -45,6 +46,8 @@ struct GeneratorConfig {
       randomized_branches; // Only for developers to tune the search performance
   bool _enable_attention_specific_optimization;
   bool _enable_concat_matmul_transformation;
+
+  mirage::config::MemoryLimits memory_limits;
 
   void show() const;
   void enable_attention_specific_optimization();

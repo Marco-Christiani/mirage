@@ -45,7 +45,7 @@ TBOperator *Graph::create_forloop_accum_op(STensor const &input,
   TBForloopAccumOp *op = new TBForloopAccumOp(this, input, type);
   // Check shmem usage
   size_t smem_usage = calculate_shared_memory_usage(op);
-  if (smem_usage > mirage::config::MAX_SMEM_SIZE) {
+  if (smem_usage > this->max_smem_size) {
     delete op;
     return nullptr;
   } else {
@@ -83,7 +83,7 @@ TBOperator *
   TBForloopAccumOp *op = new TBForloopAccumOp(this, input, rescale, type);
   // Check shmem usage
   size_t smem_usage = calculate_shared_memory_usage(op);
-  if (smem_usage > mirage::config::MAX_SMEM_SIZE) {
+  if (smem_usage > this->max_smem_size) {
     delete op;
     return nullptr;
   } else {
@@ -115,7 +115,7 @@ TBOperator *Graph::create_forloop_accum_max_op(STensor const &input) {
       new TBForloopAccumOp(this, input, mirage::type::TB_FORLOOP_ACCUM_MAX_OP);
   // Check shmem usage
   size_t smem_usage = calculate_shared_memory_usage(op);
-  if (smem_usage > mirage::config::MAX_SMEM_SIZE) {
+  if (smem_usage > this->max_smem_size) {
     delete op;
     return nullptr;
   } else {

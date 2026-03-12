@@ -34,7 +34,8 @@ private:
 
 public:
   Graph();
-  Graph(dim3 grid_dim, dim3 block_dim, int forloop_range, int reduction_dimx);
+  Graph(dim3 grid_dim, dim3 block_dim, int forloop_range, int reduction_dimx,
+        size_t max_smem_size = mirage::config::MAX_SMEM_SIZE);
   ~Graph();
   Graph(Graph const &) = delete;
   Graph &operator=(Graph const &) = delete;
@@ -203,6 +204,7 @@ public:
   std::vector<mirage::threadblock::TBOperator *> operators;
   // memory allocator
   off_t smem_offset;
+  size_t max_smem_size;
   std::vector<std::pair<off_t, size_t>> allocated_tensors;
 
   using OpType = TBOperator;

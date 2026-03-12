@@ -25,7 +25,8 @@ int cython_search(mirage::kernel::Graph const *input_graph,
                   char const *filename,
                   bool verbose,
                   char const *default_config,
-                  bool is_formal_verified) {
+                  bool is_formal_verified,
+                  mirage::config::MemoryLimits const &limits) {
   if (filename) {
     std::ifstream generated_graphs_file(filename, std::ifstream::binary);
     if (generated_graphs_file) {
@@ -52,6 +53,7 @@ int cython_search(mirage::kernel::Graph const *input_graph,
       } else if (!strcmp(default_config, "mlp")) {
       }
     }
+    config.memory_limits = limits;
     if (is_formal_verified) {
       config.verifier_type = search::VerifierType::FORMAL_VERIFIER;
     }

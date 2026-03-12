@@ -90,6 +90,12 @@ typedef struct mirage_search_options {
   size_t num_fmaps;
   int32_t const *franges;
   size_t num_franges;
+  // Memory limits (0 = use compile-time default):
+  size_t max_dmem_size;
+  size_t max_smem_size;
+  size_t max_dmem_fp_size;
+  size_t max_smem_fp_size;
+  size_t max_num_threadblocks;
 } mirage_search_options_t;
 
 /// Run superoptimization. Does not modify `graph`.

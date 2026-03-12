@@ -53,7 +53,7 @@ TBOperator *Graph::create_matmul_op(STensor const &A, STensor const &B) {
   TBMatmulOp *op = new TBMatmulOp(this, A, B);
   // Check shmem usage
   size_t smem_usage = calculate_shared_memory_usage(op);
-  if (smem_usage > mirage::config::MAX_SMEM_SIZE) {
+  if (smem_usage > this->max_smem_size) {
     delete op;
     return nullptr;
   } else {

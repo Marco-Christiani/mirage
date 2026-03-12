@@ -1,4 +1,5 @@
 #pragma once
+#include "mirage/config.h"
 #include "mirage/kernel/graph.h"
 #include "mirage/vector_types.h"
 
@@ -26,7 +27,8 @@ int cython_search(mirage::kernel::Graph const *input_graph,
                   char const *filename,
                   bool verbose,
                   char const *default_config,
-                  bool is_formal_verified);
+                  bool is_formal_verified,
+                  mirage::config::MemoryLimits const &limits = {});
 
 void cython_to_json(mirage::kernel::Graph const *input_graph,
                     char const *filename);

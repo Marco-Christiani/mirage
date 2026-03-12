@@ -32,7 +32,8 @@ private:
   };
 
 public:
-  Graph(dim3 gpu_dim = {1, 1, 1}, bool disable_fingerprint = false);
+  Graph(dim3 gpu_dim = {1, 1, 1}, bool disable_fingerprint = false,
+        mirage::config::MemoryLimits const &limits = {});
   ~Graph();
   Graph(Graph const &) = delete;
   Graph &operator=(Graph const &) = delete;
@@ -199,6 +200,8 @@ public:
   // memory check. This flag is mainly useful for the Mirage runtime
   // to handle extremely large muGraphs
   bool disable_fingerprint;
+  size_t max_dmem_size;
+  size_t max_dmem_fp_size;
   // std::unordered_map<std::pair<int, int>, DTensor, pair_hash> tensors;
   // std::unordered_map<std::pair<int, int>, std::pair<int, int>, pair_hash>
   // edges; std::vector<std::vector<SrcEdge>> edges;

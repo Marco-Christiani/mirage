@@ -26,8 +26,12 @@
 namespace mirage {
 namespace kernel {
 
-Graph::Graph(dim3 _gpu_dim, bool _disable_fingerprint)
-    : gpu_dim(_gpu_dim), disable_fingerprint(_disable_fingerprint) {
+Graph::Graph(dim3 _gpu_dim,
+             bool _disable_fingerprint,
+             mirage::config::MemoryLimits const &limits)
+    : gpu_dim(_gpu_dim), disable_fingerprint(_disable_fingerprint),
+      max_dmem_size(limits.max_dmem_size),
+      max_dmem_fp_size(limits.max_dmem_fp_size) {
   dmem_data_offset = 0;
   dmem_fp_offset = 0;
 }
@@ -106,12 +110,12 @@ bool Graph::can_allocate(DTensor const &tensor,
   }
 
   size_t data_size = ((tensor.data_size() + 15) & ~15);
-  if (dmem_data_offset + data_size > mirage::config::MAX_DMEM_SIZE) {
+  if (dmem_data_offset + data_size > this->max_dmem_size) {
     return false;
   }
   if (allocate_fingerprint) {
     size_t fp_size = ((tensor.fingerprint_size() + 15) & ~15);
-    if (dmem_fp_offset + fp_size > mirage::config::MAX_DMEM_FP_SIZE) {
+    if (dmem_fp_offset + fp_size > this->max_dmem_fp_size) {
       return false;
     }
   }
@@ -126,10 +130,10 @@ bool Graph::can_allocate(size_t data_size_in_bytes,
     return true;
   }
 
-  if (dmem_data_offset + data_size_in_bytes > mirage::config::MAX_DMEM_SIZE) {
+  if (dmem_data_offset + data_size_in_bytes > this->max_dmem_size) {
     return false;
   }
-  if (dmem_fp_offset + fp_size_in_bytes > mirage::config::MAX_DMEM_FP_SIZE) {
+  if (dmem_fp_offset + fp_size_in_bytes > this->max_dmem_fp_size) {
     return false;
   }
   return true;

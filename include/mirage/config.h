@@ -64,5 +64,15 @@ size_t const MAX_DMEM_FP_SIZE = (size_t)64 * 1024 * 1024 * 1024; // 64 GB
 size_t const MAX_SMEM_FP_SIZE = (size_t)64 * 1024 * 1024;        // 64 MB
 #endif
 
+/// Runtime-configurable memory limits for the search space.
+/// Defaults match the compile-time constants above for upstream compatibility.
+struct MemoryLimits {
+  size_t max_dmem_size = MAX_DMEM_SIZE;
+  size_t max_smem_size = MAX_SMEM_SIZE;
+  size_t max_dmem_fp_size = MAX_DMEM_FP_SIZE;
+  size_t max_smem_fp_size = MAX_SMEM_FP_SIZE;
+  size_t max_num_threadblocks = MAX_NUM_THREADBLOCKS_PER_KERNEL;
+};
+
 } // namespace config
 } // namespace mirage

@@ -534,10 +534,10 @@ TBMemoryPlan Transpiler::get_threadblock_memory_plan(tb::Graph const &tb_graph,
     }
   }
 
-  if (plan.smem_size > mirage::config::MAX_SMEM_SIZE) {
-    printf("Warning: planned smem_size(%zu) exceeds MAX_SMEM_SIZE(%zu)\n",
+  if (plan.smem_size > tb_graph.max_smem_size) {
+    printf("Warning: planned smem_size(%zu) exceeds max_smem_size(%zu)\n",
            plan.smem_size,
-           mirage::config::MAX_SMEM_SIZE);
+           tb_graph.max_smem_size);
     // for (const auto &kv : plan.addrs)
     //   printf("sguid(%zu) offset(%zu)\n", kv.first, kv.second);
   }

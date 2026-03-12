@@ -1,5 +1,6 @@
 #pragma once
 
+#include "mirage/config.h"
 #include "mirage/kernel/graph.h"
 #include "mirage/search/symbolic_graph/dim_var_assignments.h"
 #include "mirage/search/symbolic_graph/symbolic_map.h"
@@ -22,7 +23,8 @@ public:
 
   threadblock::Graph *
       to_threadblock_graph(DimVarAssignments const &assignments,
-                           std::vector<kernel::DTensor> const &inputs) const;
+                           std::vector<kernel::DTensor> const &inputs,
+                           size_t max_smem_size = mirage::config::MAX_SMEM_SIZE) const;
   bool add_operator(type::TBOperatorType op_type,
                     std::vector<int> input_indices);
   bool add_input(SymbolicDTensor dtensor, SymbolicMap const &imap);
@@ -59,7 +61,8 @@ class SymbolicKNGraph {
 public:
   SymbolicKNGraph() = default;
 
-  kernel::Graph *to_kernel_graph(DimVarAssignments const &assignments) const;
+  kernel::Graph *to_kernel_graph(DimVarAssignments const &assignments,
+                                 mirage::config::MemoryLimits const &limits = {}) const;
   // std::vector<DimVarAssignments> enumerate_assignments() const;
   bool add_operator(type::KNOperatorType op_type,
                     std::vector<int> input_indices);

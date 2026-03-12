@@ -9,6 +9,18 @@ using namespace mirage::config;
 
 DeviceMemoryManager *DeviceMemoryManager::singleton = nullptr;
 
+#ifndef MIRAGE_FINGERPRINT_USE_CUDA
+/*static*/
+void DeviceMemoryManager::configure(int /*gpu_id*/,
+                                    mirage::config::MemoryLimits const & /*limits*/) {
+  // CPU path: configure is a no-op, get_instance creates the singleton
+  // with compile-time defaults. The limits parameter is accepted but unused.
+  if (singleton == nullptr) {
+    singleton = new DeviceMemoryManager();
+  }
+}
+#endif
+
 #ifdef MIRAGE_FINGERPRINT_USE_CPU
 DeviceMemoryManager::DeviceMemoryManager() {
   num_devices = 1; // Default to 1 device for non-CUDA environments

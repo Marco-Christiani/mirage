@@ -246,7 +246,8 @@ void KernelGraphGenerator::generate_next_operator(
                         grid_dim,
                         block_dim,
                         forloop_range,
-                        config.reduction_dimx);
+                        config.reduction_dimx,
+                        config.memory_limits.max_smem_size);
                     bool input_created = true;
                     for (size_t i = 0; i < input_tensors.size(); ++i) {
                       DTensor dtensor = input_tensors[i];
@@ -395,7 +396,8 @@ void KernelGraphGenerator::generate_kernel_graphs() {
   start_time = std::chrono::steady_clock::now();
   SearchContext c;
   c.level = SearchLevel::LV_KERNEL;
-  c.kn_graph = std::make_shared<kernel::Graph>();
+  c.kn_graph = std::make_shared<kernel::Graph>(
+      dim3(1, 1, 1), false, config.memory_limits);
 
   for (auto const &input_attr : computation_graph_input_attrs) {
     auto [dim, data_type, layout, strides] = input_attr;
@@ -907,7 +909,7 @@ bool KernelGraphGenerator::instantiate_symbolic_graph(
   for (DimVarAssignments const &assignments :
        get_kn_graph_assignments(symbolic_graph)) {
     kernel::Graph *instantiated_graph =
-        symbolic_graph.to_kernel_graph(assignments);
+        symbolic_graph.to_kernel_graph(assignments, config.memory_limits);
     if (verify(*instantiated_graph)) {
       at_least_one_valid = true;
       this->generated_graphs.push_back(json(*instantiated_graph));

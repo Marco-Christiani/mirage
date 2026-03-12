@@ -38,7 +38,7 @@ TBOperator *Graph::create_reduction_op(STensor const &input, int dim) {
   TBOperator *op = new TBReductionOp(this, input, dim, 1 /*size*/);
   // Check shmem usage
   size_t smem_usage = calculate_shared_memory_usage(op);
-  if (smem_usage > mirage::config::MAX_SMEM_SIZE) {
+  if (smem_usage > this->max_smem_size) {
     delete op;
     return nullptr;
   } else {
@@ -57,7 +57,7 @@ TBOperator *Graph::create_reduction_to_dimx_op(STensor const &input, int dim) {
   TBOperator *op = new TBReductionOp(this, input, dim, this->reduction_dimx);
   // Check shmem usage
   size_t smem_usage = calculate_shared_memory_usage(op);
-  if (smem_usage > mirage::config::MAX_SMEM_SIZE) {
+  if (smem_usage > this->max_smem_size) {
     delete op;
     return nullptr;
   } else {
@@ -84,7 +84,7 @@ TBOperator *Graph::create_reduction_max_op(STensor const &input, int dim) {
       new TBReductionOp(this, input, dim, -1 /*size = -1 for max*/);
   // Check shmem usage
   size_t smem_usage = calculate_shared_memory_usage(op);
-  if (smem_usage > mirage::config::MAX_SMEM_SIZE) {
+  if (smem_usage > this->max_smem_size) {
     delete op;
     return nullptr;
   } else {

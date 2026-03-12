@@ -41,7 +41,8 @@ bool SymbolicTBGraph::remove_last_operator() {
 
 threadblock::Graph *SymbolicTBGraph::to_threadblock_graph(
     DimVarAssignments const &assignments,
-    std::vector<kernel::DTensor> const &inputs) const {
+    std::vector<kernel::DTensor> const &inputs,
+    size_t max_smem_size) const {
   dim3 grid_dim_val(assignments.get_value(grid_dim[0]),
                     assignments.get_value(grid_dim[1]),
                     assignments.get_value(grid_dim[2]));
@@ -50,7 +51,8 @@ threadblock::Graph *SymbolicTBGraph::to_threadblock_graph(
                      assignments.get_value(block_dim[2]));
   int forloop_range_val = assignments.get_value(forloop_range);
   threadblock::Graph *graph = new threadblock::Graph(
-      grid_dim_val, block_dim_val, forloop_range_val, reduction_dimx);
+      grid_dim_val, block_dim_val, forloop_range_val, reduction_dimx,
+      max_smem_size);
 
   std::vector<threadblock::STensor> tensors_val;
 
@@ -424,8 +426,9 @@ bool SymbolicTBGraph::add_output(int input_index,
 }
 
 mirage::kernel::Graph *SymbolicKNGraph::to_kernel_graph(
-    DimVarAssignments const &assignments) const {
-  kernel::Graph *graph = new kernel::Graph();
+    DimVarAssignments const &assignments,
+    mirage::config::MemoryLimits const &limits) const {
+  kernel::Graph *graph = new kernel::Graph(dim3(1, 1, 1), false, limits);
   std::vector<kernel::DTensor> tensors_val;
   for (size_t i = 0; i < this->operators.size(); ++i) {
     std::vector<kernel::DTensor> input_tensors;
@@ -439,7 +442,8 @@ mirage::kernel::Graph *SymbolicKNGraph::to_kernel_graph(
               this->operators[i].args);
       threadblock::Graph *tb_graph =
           args->tb_graph_template.to_threadblock_graph(assignments,
-                                                       input_tensors);
+                                                       input_tensors,
+                                                       limits.max_smem_size);
       if (tb_graph == nullptr) {
         delete graph;
         return nullptr;

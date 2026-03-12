@@ -55,7 +55,7 @@ TBOperator *Graph::create_concat_op(STensor const &A,
   TBOperator *op = new TBConcatOp(this, A, B, concat_dim);
   // Check shmem usage
   size_t smem_usage = calculate_shared_memory_usage(op);
-  if (smem_usage > mirage::config::MAX_SMEM_SIZE) {
+  if (smem_usage > this->max_smem_size) {
     delete op;
     return nullptr;
   } else {
