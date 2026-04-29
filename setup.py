@@ -15,7 +15,6 @@
 import os
 import shutil
 from os import path
-from pathlib import Path
 import sys
 import sysconfig
 from setuptools import find_packages, setup, Command
@@ -252,13 +251,6 @@ class build_py(_build_py):
                 shutil.copy2(so_path, lib_dir)
         super().run()
 
-setup_args = {}
-
-# Create requirements list from requirements.txt
-with open(Path(__file__).parent / "requirements.txt", "r") as reqs_file:
-    requirements = reqs_file.read().strip().split("\n")
-print(f"Requirements: {requirements}")
-
 INCLUDE_BASE = "python/mirage/include"
 
 
@@ -310,7 +302,6 @@ with copy_include() as copied:
         version=__version__,
         description="Mirage: A Multi-Level Superoptimizer for Tensor Algebra",
         zip_safe=False,
-        install_requires=requirements,
         packages=find_packages(where="python"),
         package_dir={"": "python"},
         package_data={"mirage": ["lib/*.so"]},
@@ -318,5 +309,4 @@ with copy_include() as copied:
         url="https://github.com/mirage-project/mirage",
         ext_modules=config_cython(),
         include_package_data=True,
-        # **setup_args,
     )
