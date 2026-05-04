@@ -30,7 +30,7 @@ jobs:
           submodules: recursive
           
       - name: Install conda and Mirage dependencies
-        uses: conda-incubator/setup-miniconda@v3
+        uses: conda-incubator/setup-miniconda@v4
         with:
           miniconda-version: "latest"
           activate-environment: mirage
