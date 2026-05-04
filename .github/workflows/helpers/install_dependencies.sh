@@ -37,15 +37,6 @@ echo "Installing PyTorch for CUDA ${CUDA_VERSION} (using ${TORCH_INDEX} index)..
 pip3 install torch torchvision torchaudio \
   --index-url https://download.pytorch.org/whl/${TORCH_INDEX}
 
-# Install project requirements (skip git+ dependencies that break wheel metadata)
-if [ -f requirements.txt ]; then
-  grep -v '^[[:space:]]*#' requirements.txt | grep -v 'git+' | pip3 install -r /dev/stdin
-  # Install git+ dependencies separately (won't be in wheel metadata)
-  grep 'git+' requirements.txt | while read -r dep; do
-    pip3 install "$dep" || echo "WARNING: Failed to install $dep"
-  done
-fi
-
 # Install cuDNN
 UBUNTU_VERSION=$(lsb_release -rs | tr -d '.')
 wget -c -q "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu${UBUNTU_VERSION}/x86_64/cuda-keyring_1.1-1_all.deb"
