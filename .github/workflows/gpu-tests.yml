@@ -2,7 +2,7 @@ name: "GPU Tests"
 on:
   push:
     branches:
-      - "main"
+      - "mpk"
   workflow_dispatch:
 
 concurrency:
