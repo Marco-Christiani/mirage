@@ -15,13 +15,6 @@ TORCH_CUDA="cu${CUDA_SHORT}"
 sudo apt update
 sudo apt install -y software-properties-common lsb-release wget python3-pip g++ make libboost-all-dev
 
-# Install Z3
-sudo apt-get install -y libz3-4 libz3-dev
-
-# Make sure Z3 lib is found (enforces Z3 version 4.16)
-sudo ln -s /usr/lib/x86_64-linux-gnu/libz3.so /usr/lib/libz3.so.4.16 || true
-sudo ldconfig
-
 # Install CMake
 CMAKE_VERSION=3.27.0
 wget -O cmake.sh https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-x86_64.sh
